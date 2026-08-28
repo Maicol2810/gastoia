@@ -49,7 +49,7 @@ export default function App() {
           <span className="brand-mark">
             Gasto<span>IA</span>
           </span>
-          <span className="brand-tag">Control de gastos personales</span>
+          <span className="brand-tag">Control de gastos personaless</span>
         </div>
         <div className="header-date">{hoy}</div>
       </header>
