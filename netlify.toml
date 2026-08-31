@@ -1,4 +1,5 @@
-﻿[build]
+[build]
+  base = "gastoia"
   command = "npm run build"
   publish = "dist"
 
