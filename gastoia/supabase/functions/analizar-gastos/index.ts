@@ -1,12 +1,14 @@
 // Supabase Edge Function: analizar-gastos
 // Recibe un resumen de los gastos del usuario (ya calculado en el frontend)
-// y le pide a un modelo de IA que redacte recomendaciones de ahorro breves.
-// La clave del proveedor de IA vive únicamente aquí (variable de entorno de
-// la función), nunca en el frontend.
+// y le pide a un modelo de IA (Google Gemini) que redacte recomendaciones
+// de ahorro breves. La clave del proveedor de IA vive únicamente aquí
+// (variable de entorno de la función), nunca en el frontend.
+//
+// Obtén tu clave gratis en: https://aistudio.google.com/apikey
 //
 // Despliegue:
 //   supabase functions deploy analizar-gastos
-//   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+//   supabase secrets set GEMINI_API_KEY=tu-clave-de-gemini
 //
 // Invocación desde el frontend: supabase.functions.invoke('analizar-gastos', { body: { stats } })
 
@@ -38,10 +40,10 @@ serve(async (req) => {
       })
     }
 
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+    const apiKey = Deno.env.get('GEMINI_API_KEY')
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'ANTHROPIC_API_KEY no está configurada en los secrets de la función.' }),
+        JSON.stringify({ error: 'GEMINI_API_KEY no está configurada en los secrets de la función.' }),
         { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
       )
     }
@@ -54,19 +56,17 @@ serve(async (req) => {
 
 Escribe en español, en un solo párrafo de máximo 5 líneas, 2 o 3 recomendaciones sencillas y accionables para ahorrar, basadas específicamente en estos datos. No repitas las cifras que ya se muestran arriba, ve directo a las recomendaciones.`
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 400,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    })
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 400 }
+        })
+      }
+    )
 
     if (!response.ok) {
       const detalle = await response.text()
@@ -74,8 +74,8 @@ Escribe en español, en un solo párrafo de máximo 5 líneas, 2 o 3 recomendaci
     }
 
     const data = await response.json()
-    const textBlock = data.content?.find((b: { type: string }) => b.type === 'text')
-    const recomendaciones = textBlock?.text?.trim() || 'No se generaron recomendaciones.'
+    const recomendaciones =
+      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || 'No se generaron recomendaciones.'
 
     return new Response(JSON.stringify({ recomendaciones }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
