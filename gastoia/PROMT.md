@@ -49,3 +49,5 @@ Cuál fue mi gasto más alto.
 Recomendaciones sencillas para ahorrar.
 No implementar login, usuarios, roles ni permisos. La aplicación debe entrar directamente al dashboard y trabajar directamente con la base de datos de Supabase.
 Crear una interfaz moderna, limpia, sencilla y responsive.
+
+link : https://controlgastoia.netlify.app/
